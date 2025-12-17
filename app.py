@@ -1,29 +1,14 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
-import numpy as np
-from sentence_transformers import SentenceTransformer
 
-app = FastAPI()
+import streamlit as st
+import requests
 
-model = SentenceTransformer("all-MiniLM-L6-v2")
+API_URL = "http://localhost:8000/recommend"
 
-CATALOG = [
-    {"name":"Java Programming","url":"https://www.shl.com/","description":"Java skills","test_type":["K"],"duration":40,"adaptive_support":"Yes","remote_support":"Yes"},
-    {"name":"Teamwork","url":"https://www.shl.com/","description":"Collaboration skills","test_type":["P"],"duration":30,"adaptive_support":"No","remote_support":"Yes"}
-]
+st.title("SHL GenAI Recommender")
 
-embeddings = model.encode([c["description"] for c in CATALOG], normalize_embeddings=True)
-
-class Query(BaseModel):
-    query: str
-
-@app.get("/health")
-def health():
-    return {"status":"healthy"}
-
-@app.post("/recommend")
-def recommend(q: Query):
-    q_emb = model.encode([q.query], normalize_embeddings=True)
-    scores = np.dot(embeddings, q_emb.T).flatten()
-    idx = scores.argsort()[::-1][:5]
-    return {"recommended_assessments":[CATALOG[i] for i in idx]}
+query = st.text_area("Enter job description")
+if st.button("Recommend"):
+    res = requests.post(API_URL, json={"query":query}).json()
+    for r in res["recommended_assessments"]:
+        st.subheader(r["name"])
+        st.write(r["description"])
